@@ -39,6 +39,41 @@ def PrintText(preImage, rotation_angle):
     else:
         DrawBox(preImage, result)  # 회전할 필요가 없는 경우 그대로 박스 그리기
 
+# def PrintText(preImage, is_horizontal):
+#     reader = easyocr.Reader(['ko', 'en'])
+#     result = reader.readtext(preImage)
+
+#     if is_horizontal:
+#         # Text is horizontal
+#         rotated_image_0 = preImage  # No rotation needed
+#         rotated_image_180, _ = RotateImage(preImage, 180)
+
+#         result_0 = result
+#         result_180 = reader.readtext(rotated_image_180)
+
+#         # Compare recognition results
+#         if count_text(result_0) > count_text(result_180):
+#             DrawBox(rotated_image_0, result_0)
+#         else:
+#             DrawBox(rotated_image_180, result_180)
+
+#     else:
+#         # Text is vertical
+#         rotated_image_90, _ = RotateImage(preImage, 90)
+#         rotated_image_270, _ = RotateImage(preImage, 270)
+
+#         result_90 = reader.readtext(rotated_image_90)
+#         result_270 = reader.readtext(rotated_image_270)
+
+#         # Compare recognition results
+#         if count_text(result_90) > count_text(result_270):
+#             DrawBox(rotated_image_90, result_90)
+#         else:
+#             DrawBox(rotated_image_270, result_270)
+
+# def count_text(result):
+#     return len(result)
+
 # 기울기 계산
 def Slope(result, rotation_angle):
     print("회전되어야 할 기울기 : ",rotation_angle)
@@ -75,7 +110,16 @@ def calculate_slope2(x1, y1, x2, y2, rotate):
             slope = rotate
 
         return slope
-    
+
+# 이미지 회전 함수
+def RotateImage(preImage, angle):
+    h, w = preImage.shape[:2]
+    center = (w // 2, h // 2)
+    M = cv2.getRotationMatrix2D(center, angle, 1.0)
+    rotated_img = cv2.warpAffine(preImage, M, (w, h))
+
+    return rotated_img, angle
+
 def get_osd_orientation(preImage):
     # pytesseract로부터 반환된 텍스트 방향(OSD) 가져오기
     orientation = pytesseract.image_to_osd(preImage)
@@ -94,15 +138,6 @@ def get_osd_orientation(preImage):
     print(rotation_angle)
 
     return rotation_angle
-
-# 이미지 회전 함수
-def RotateImage(preImage, angle):
-    h, w = preImage.shape[:2]
-    center = (w // 2, h // 2)
-    M = cv2.getRotationMatrix2D(center, angle, 1.0)
-    rotated_img = cv2.warpAffine(preImage, M, (w, h))
-
-    return rotated_img, angle
 
 # 텍스트 상자 그리기 함수
 def DrawBox(preImage, result):
@@ -148,13 +183,13 @@ def analyze_projection(image):
 
 # 메인 함수
 if __name__ == "__main__":
-    image_path = 'test.jpg'
+    image_path = 'exam2.jpg'
 
     preImage = preprocess_image(image_path)
-
     rotation_angle = get_osd_orientation(preImage)
 
-    check = analyze_projection(preImage)
-    print("가로입니까? : ",check)
+    is_horizontal = analyze_projection(preImage)
+    print("가로입니까? : ",is_horizontal)
 
     PrintText(preImage, rotation_angle)
+    # PrintText(preImage, is_horizontal)
