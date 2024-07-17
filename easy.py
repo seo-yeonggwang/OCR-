@@ -7,7 +7,6 @@ import cv2
 import matplotlib.pyplot as plt
 from PIL import Image, ImageDraw, ImageFont
 
-import os
 from collections import Counter
 
 def preprocess_image(image):
@@ -15,9 +14,10 @@ def preprocess_image(image):
 
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY) # RGB -> Gray
     blurred = cv2.GaussianBlur(gray, (5, 5), 0) # 흐림처리(노이즈 제거) : 높을수록 더 넓은 영역을 평균화하여 블러 효과가 강해질 수 있음
-    edged = cv2.Canny(blurred, 100, 200) # 엣지 검출 (이미지, 최소강도, 최대강도) : 최소강도보다 작거나 최대강도보다 큰 경우 엣지로 간주하지 않음
+    #edged = cv2.Canny(blurred, 100, 200) # 엣지 검출 (이미지, 최소강도, 최대강도) : 최소강도보다 작거나 최대강도보다 큰 경우 엣지로 간주하지 않음
+    _, binary = cv2.threshold(blurred, 127, 255, cv2.THRESH_BINARY_INV) # 이진화
 
-    return edged
+    return binary
 
 def PrintText(preImage, rotation_angle):
     reader = easyocr.Reader(['ko', 'en'])
@@ -42,42 +42,20 @@ def PrintText(preImage, rotation_angle):
 # 기울기 계산
 def Slope(result, rotation_angle):
     print("회전되어야 할 기울기 : ",rotation_angle)
-    #slopes1 = []
-    #slopes2 = []
+
     slopes = []
 
     for box, _, _ in result:
         x1, y1 = box[0]
         x2, y2 = box[1]
 
-        if rotation_angle == 0:
-            rotate = 0
-        elif rotation_angle == 90:
-            rotate = 90
-        elif rotation_angle == 180:
-            rotate = 180
-        elif rotation_angle == 270:
-            rotate = 270
+        rotate = rotation_angle
         print("rotate",rotate)
 
-        #slopes1.append(calculate_slope1(x1, y1, x2, y2))
-        #slopes2.append(calculate_slope2(x1, y1, x2, y2, rotate))
         slopes.append(calculate_slope2(x1, y1, x2, y2, rotate))
-    #print("slope1 모음 : ", slopes1)
-    #print("slope2 모음 : ", slopes2)
 
     # 평균 기울기 계산
-    #average_slope1 = sum(slopes1) / len(slopes1)
-    #average_slope2 = sum(slopes2) / len(slopes2)
     average_slope = sum(slopes) / len(slopes)
-
-    #print("slope1 평균 : ", average_slope1)
-    #print("slope2 평균 : ", average_slope2)
-
-    # if abs(average_slope1 - average_slope2) < 20:
-    #     average_slope = average_slope2
-    # else:
-    #     average_slope = average_slope1
 
     return average_slope, rotate
 
@@ -88,22 +66,15 @@ def calculate_distance(x1, y1, x2, y2):
     return distance
 
 # 두 점의 기울기 계산
-def calculate_slope1(x1, y1, x2, y2):
+def calculate_slope2(x1, y1, x2, y2, rotate):
     if x2 - x1 != 0:  # 분모가 0인 경우 방지
         slope = (y2 - y1) / (x2 - x1)
         print("slope", slope)
 
+        if slope == 0: # 기울기가 무한 또는 0에 수렴할 경우 판단
+            slope = rotate
+
         return slope
-    
-def calculate_slope2(x1, y1, x2, y2, rotate):
-    if x2 - x1 != 0:  # 분모가 0인 경우 방지
-        slope2 = (y2 - y1) / (x2 - x1)
-        print("slope", slope2)
-
-        if slope2 == 0: # 기울기가 무한 또는 0에 수렴할 경우 판단
-            slope2 = rotate
-
-        return slope2
     
 def get_osd_orientation(preImage):
     # pytesseract로부터 반환된 텍스트 방향(OSD) 가져오기
@@ -162,12 +133,28 @@ def DrawBox(preImage, result):
     plt.axis('off')
     plt.show()
 
+def analyze_projection(image):
+    vertical_projection = np.sum(image, axis=0) # 각 열을 따라 더하기
+    horizontal_projection = np.sum(image, axis=1) # 각 행을 따라 더하기
+
+    v_max = np.max(vertical_projection)
+    h_max = np.max(horizontal_projection)
+
+    if v_max > h_max:
+        check = False
+    else:
+        check = True
+    return check
+
 # 메인 함수
 if __name__ == "__main__":
-    image_path = 'exam3_2.jpg'
+    image_path = 'test.jpg'
 
     preImage = preprocess_image(image_path)
 
     rotation_angle = get_osd_orientation(preImage)
+
+    check = analyze_projection(preImage)
+    print("가로입니까? : ",check)
 
     PrintText(preImage, rotation_angle)
