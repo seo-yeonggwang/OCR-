@@ -19,103 +19,124 @@ def preprocess_image(image):
 
     return binary
 
-def PrintText(preImage, rotation_angle):
-    reader = easyocr.Reader(['ko', 'en'])
-    result = reader.readtext(preImage)
-
-    # # 텍스트만 추출하고 공백으로 결합하여 출력
-    # texts = [text for _, text, _ in result]
-    # print(" ".join(texts))
-
-    slope, rotate = Slope(result, rotation_angle)
-    print("평균 기울기:", slope)
-
-    # 이미지를 회전할 필요가 있는 경우
-    if abs(slope) > 45:  # 기울기가 45도 초과이면 회전 필요
-        rotated_image, angle = RotateImage(preImage, -rotate)
-        rotated_result = reader.readtext(rotated_image)  # 회전된 이미지에서 텍스트 인식
-        # print("result : ",rotated_result)
-        DrawBox(rotated_image, rotated_result)  # 회전된 이미지에 대해 박스 그리기
-    else:
-        DrawBox(preImage, result)  # 회전할 필요가 없는 경우 그대로 박스 그리기
-
-# def PrintText(preImage, is_horizontal):
+# def PrintText(preImage, rotation_angle):
 #     reader = easyocr.Reader(['ko', 'en'])
 #     result = reader.readtext(preImage)
 
-#     if is_horizontal:
-#         # Text is horizontal
-#         rotated_image_0 = preImage  # No rotation needed
-#         rotated_image_180, _ = RotateImage(preImage, 180)
+#     # # 텍스트만 추출하고 공백으로 결합하여 출력
+#     # texts = [text for _, text, _ in result]
+#     # print(" ".join(texts))
 
-#         result_0 = result
-#         result_180 = reader.readtext(rotated_image_180)
+#     slope, rotate = Slope(result, rotation_angle)
+#     print("평균 기울기:", slope)
 
-#         # Compare recognition results
-#         if count_text(result_0) > count_text(result_180):
-#             DrawBox(rotated_image_0, result_0)
-#         else:
-#             DrawBox(rotated_image_180, result_180)
-
+#     # 이미지를 회전할 필요가 있는 경우
+#     if abs(slope) > 45:  # 기울기가 45도 초과이면 회전 필요
+#         rotated_image, angle = RotateImage(preImage, -rotate)
+#         rotated_result = reader.readtext(rotated_image)  # 회전된 이미지에서 텍스트 인식
+#         # print("result : ",rotated_result)
+#         DrawBox(rotated_image, rotated_result)  # 회전된 이미지에 대해 박스 그리기
 #     else:
-#         # Text is vertical
-#         rotated_image_90, _ = RotateImage(preImage, 90)
-#         rotated_image_270, _ = RotateImage(preImage, 270)
+#         DrawBox(preImage, result)  # 회전할 필요가 없는 경우 그대로 박스 그리기
 
-#         result_90 = reader.readtext(rotated_image_90)
-#         result_270 = reader.readtext(rotated_image_270)
+def PrintText(preImage, is_horizontal, rotation_angle):
+    reader = easyocr.Reader(['ko', 'en'])
+    result = reader.readtext(preImage)
 
-#         # Compare recognition results
-#         if count_text(result_90) > count_text(result_270):
-#             DrawBox(rotated_image_90, result_90)
-#         else:
-#             DrawBox(rotated_image_270, result_270)
+    if is_horizontal:
+        # 수평이라면
+        rotated_image_0 = preImage  # 변함 없음
+        rotated_image_180, _ = RotateImage(preImage, 180)
 
-# def count_text(result):
-#     return len(result)
+        result_0 = result
+        result_180 = reader.readtext(rotated_image_180)
+
+        # Compare recognition results
+        if count_text(result_0, 0) == count_text(result_180, 180):
+            if rotation_angle == 0:
+                DrawBox(rotated_image_0, result_0)
+            elif rotation_angle == 180:
+                DrawBox(rotated_image_180, result_180)
+            else:
+                print("글자를 인식할 수 없습니다.")
+                return 0
+        elif count_text(result_0, 0) > count_text(result_180, 180):
+            DrawBox(rotated_image_0, result_0)
+        else:
+            DrawBox(rotated_image_180, result_180)
+
+    else:
+        # Text is vertical
+        rotated_image_90, _ = RotateImage(preImage, 90)
+        rotated_image_270, _ = RotateImage(preImage, 270)
+
+        result_90 = reader.readtext(rotated_image_90)
+        result_270 = reader.readtext(rotated_image_270)
+
+        # Compare recognition results
+        if count_text(result_90, 90) == count_text(result_270, 270):
+            if rotation_angle == 90:
+                DrawBox(rotated_image_90, result_90)
+            elif rotation_angle == 270:
+                DrawBox(rotated_image_270, result_270)
+            else:
+                print("글자를 인식할 수 없습니다.")
+                return 0            
+        elif count_text(result_90, 90) > count_text(result_270, 270):
+            DrawBox(rotated_image_90, result_90)
+        else:
+            DrawBox(rotated_image_270, result_270)
+
+def count_text(result, angle):
+    total_count = 0
+    for (bbox, text, prob) in result:
+        # 한글, 영어, 숫자만 계산
+        total_count += sum(c.isalnum() for c in text)
+    print(f"Angle: {angle}, Total Count: {total_count}")
+    return total_count
 
 # 기울기 계산
-def Slope(result, rotation_angle):
-    print("회전되어야 할 기울기 : ",rotation_angle)
+# def Slope(result, rotation_angle):
+#     print("회전되어야 할 기울기 : ",rotation_angle)
 
-    slopes = []
+#     slopes = []
 
-    for box, _, _ in result:
-        x1, y1 = box[0]
-        x2, y2 = box[1]
+#     for box, _, _ in result:
+#         x1, y1 = box[0]
+#         x2, y2 = box[1]
 
-        rotate = rotation_angle
-        print("rotate",rotate)
+#         rotate = rotation_angle
+#         print("rotate",rotate)
 
-        slopes.append(calculate_slope2(x1, y1, x2, y2, rotate))
+#         slopes.append(calculate_slope2(x1, y1, x2, y2, rotate))
 
-    # 평균 기울기 계산
-    average_slope = sum(slopes) / len(slopes)
+#     # 평균 기울기 계산
+#     average_slope = sum(slopes) / len(slopes)
 
-    return average_slope, rotate
+#     return average_slope, rotate
 
-# 두 점 사이의 거리 계산
-def calculate_distance(x1, y1, x2, y2):
-    distance = math.sqrt((x2 - x1)**2 + (y2 - y1)**2)
+# # 두 점 사이의 거리 계산
+# def calculate_distance(x1, y1, x2, y2):
+#     distance = math.sqrt((x2 - x1)**2 + (y2 - y1)**2)
 
-    return distance
+#     return distance
 
-# 두 점의 기울기 계산
-def calculate_slope2(x1, y1, x2, y2, rotate):
-    if x2 - x1 != 0:  # 분모가 0인 경우 방지
-        slope = (y2 - y1) / (x2 - x1)
-        print("slope", slope)
+# # 두 점의 기울기 계산
+# def calculate_slope2(x1, y1, x2, y2, rotate):
+#     if x2 - x1 != 0:  # 분모가 0인 경우 방지
+#         slope = (y2 - y1) / (x2 - x1)
+#         print("slope", slope)
 
-        if slope == 0: # 기울기가 무한 또는 0에 수렴할 경우 판단
-            slope = rotate
+#         if slope == 0: # 기울기가 무한 또는 0에 수렴할 경우 판단
+#             slope = rotate
 
-        return slope
+#         return slope
 
 # 이미지 회전 함수
 def RotateImage(preImage, angle):
-    h, w = preImage.shape[:2]
-    center = (w // 2, h // 2)
-    M = cv2.getRotationMatrix2D(center, angle, 1.0)
+    h, w = preImage.shape[:2] # 높이, 너비
+    center = (w // 2, h // 2) # 중점
+    M = cv2.getRotationMatrix2D(center, -angle, 1.0) # angle이 음수 : 시계 방향, angle이 양수 : 반시계 방향
     rotated_img = cv2.warpAffine(preImage, M, (w, h))
 
     return rotated_img, angle
@@ -183,7 +204,7 @@ def analyze_projection(image):
 
 # 메인 함수
 if __name__ == "__main__":
-    image_path = 'exam2.jpg'
+    image_path = 'exam1.jpg'
 
     preImage = preprocess_image(image_path)
     rotation_angle = get_osd_orientation(preImage)
@@ -191,5 +212,5 @@ if __name__ == "__main__":
     is_horizontal = analyze_projection(preImage)
     print("가로입니까? : ",is_horizontal)
 
-    PrintText(preImage, rotation_angle)
-    # PrintText(preImage, is_horizontal)
+    # PrintText(preImage, rotation_angle)
+    PrintText(preImage, is_horizontal, rotation_angle)
